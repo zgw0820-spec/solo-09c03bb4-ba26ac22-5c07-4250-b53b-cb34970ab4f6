@@ -1,0 +1,16 @@
+services:
+  ipv6-prefix-audit:
+    build: .
+    image: ipv6-prefix-audit:latest
+    container_name: ipv6-prefix-audit
+    ports:
+      - "8000:8000"
+    environment:
+      AUDIT_DB: /data/audit.db
+      AUDIT_SECRET_KEY: change-me-in-production
+    volumes:
+      - audit-data:/data
+    restart: unless-stopped
+
+volumes:
+  audit-data:

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h1>旧前缀 PIO 补报（限有效的 SLAAC 通告）</h1>
+  {% if rnd %}
+  <p class="muted">
+    接收时刻窗口：<code>{{ rnd.snapshot_at | utc }}</code>（不含）至
+    <code>{{ rnd.check_at | utc }}</code>（含）。有效寿命为有限整数秒（0 .. 4294967294）。
+    可乱序提交，系统按接收时刻、序号应用 RFC 4862 §5.5.3(e) 未认证通告规则。
+  </p>
+  <form method="post" action="{{ url_for('main.pio_batch_form') }}">
+    <table id="pio-table">
+      <thead><tr><th style="width:160px">终端</th><th style="width:90px">序号</th>
+        <th style="width:150px">路由器</th><th style="width:210px">UTC 接收时刻</th>
+        <th style="width:150px">有效寿命(秒)</th><th></th></tr></thead>
+      <tbody>
+      {% for i in range(6) %}
+        <tr>
+          <td>
+            {% if terminals %}
+            <select name="terminal">
+              <option value="">— 空行忽略 —</option>
+              {% for t in terminals %}<option value="{{ t.name }}">{{ t.name }}</option>{% endfor %}
+            </select>
+            {% else %}<input name="terminal" placeholder="终端名称">{% endif %}
+          </td>
+          <td><input name="seq" placeholder="如 0"></td>
+          <td><input name="router" placeholder="如 R1"></td>
+          <td><input name="received_at" placeholder="2026-11-20T01:00:00Z"></td>
+          <td><input name="valid_lifetime" placeholder="如 86400"></td>
+          <td><button type="button" class="secondary" onclick="this.closest('tr').remove()">删行</button></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p>
+      <button type="button" class="secondary" onclick="addRow()">再加一行</button>
+      <button type="submit">整批提交（原子生效）</button>
+    </p>
+  </form>
+  {% else %}
+  <p class="muted">请先到 <a href="{{ url_for('main.setup') }}">本轮设置</a> 建立核查。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>等价 JSON API（脚本/自动化）</h2>
+  <p class="muted"><code>POST /api/pio-batch</code>，请求体为数组；原样重报返回跳过数，同号异内容或校验失败返回 409 且整批不落库。</p>
+  <pre style="overflow:auto;background:#132a4a;color:#dce8ff;padding:14px;border-radius:8px;font-size:13px">[
+  {"terminal": "PC-A", "seq": 0, "router": "R1",
+   "received_at": "2026-11-20T01:00:00Z", "valid_lifetime": 3600}
+]</pre>
+</div>
+
+<script>
+function addRow() {
+  const tbody = document.querySelector('#pio-table tbody');
+  const tr = tbody.rows[0].cloneNode(true);
+  tr.querySelectorAll('input,select').forEach(el => { if (el.tagName === 'INPUT') el.value = ''; else el.selectedIndex = 0; });
+  tbody.appendChild(tr);
+}
+</script>
+{% endblock %}

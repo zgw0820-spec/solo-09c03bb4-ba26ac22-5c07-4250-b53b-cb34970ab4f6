@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h1>本轮核查</h1>
+  {% if rnd %}
+  <p>快照 UTC 时刻：<code>{{ rnd.snapshot_at | utc }}</code>　　核查 UTC 时刻：<code>{{ rnd.check_at | utc }}</code></p>
+  {% else %}
+  <p class="muted">尚未建立本轮核查，请先到 <a href="{{ url_for('main.setup') }}">本轮设置</a> 填写快照与核查 UTC 时刻。</p>
+  {% endif %}
+  <form class="inline" method="post" action="{{ url_for('main.reset') }}"
+        onsubmit="return confirm('将清空本轮全部终端、通告与结论，确认？');">
+    <button class="danger" type="submit">清空本轮（重新演示）</button>
+  </form>
+</div>
+
+{% if rnd %}
+<div class="card">
+  <h2>登记终端（快照时单个旧地址到期时刻，无地址留空）</h2>
+  <form method="post" action="{{ url_for('main.add_terminal') }}">
+    <div class="grid">
+      <div><label>终端名称</label><input name="name" required placeholder="如 PC-A"></div>
+      <div><label>快照旧地址到期 UTC（可留空）</label>
+        <input name="snapshot_expiry" placeholder="2026-11-20T02:00:00Z"></div>
+      <div style="align-self:end"><button type="submit">登记终端</button></div>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>核查时仍持有旧地址的终端（按已收记录）</h2>
+  <table>
+    <thead><tr><th>终端</th><th>核查时旧地址</th><th>到期时刻 (UTC)</th><th>最后一条改变它的通告</th></tr></thead>
+    <tbody>
+    {% for r in rows if r.alive_at_check %}
+      <tr>
+        <td><a href="{{ url_for('main.terminal_detail', terminal_id=r.id) }}">{{ r.name }}</a></td>
+        <td><span class="tag alive">仍持有</span></td>
+        <td><code>{{ r.expiry_at | utc }}</code></td>
+        <td>
+          {% if r.source == 'snapshot' or r.last_pio_id is none %}
+            <span class="tag snap">快照未改</span> 快照到期 <code>{{ r.snapshot_expiry | utc }}</code>
+          {% else %}
+            路由器 <b>{{ r.last_router }}</b>，序号 {{ r.last_seq }}，
+            接收 <code>{{ r.last_received_at | utc }}</code>，有效寿命 {{ r.last_valid_lifetime }}s
+            <span class="rule">{{ r.source }}</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="muted">暂无：还没有终端在核查时刻仍持有旧地址。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>全部终端与结论（含已到期/无地址）</h2>
+  <table>
+    <thead><tr><th>终端</th><th>快照到期 (UTC)</th><th>已收 PIO</th><th>重算后到期 (UTC)</th>
+      <th>核查时状态</th><th>结论来源</th><th>依据</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="{{ url_for('main.terminal_detail', terminal_id=r.id) }}">{{ r.name }}</a></td>
+        <td>{{ r.snapshot_expiry | utc or '—' }}</td>
+        <td>{{ r.pio_count }} 条</td>
+        <td>{{ r.expiry_at | utc or '—' }}</td>
+        <td>{% if r.alive_at_check %}<span class="tag alive">仍持有</span>
+            {% else %}<span class="tag gone">已到期/无地址</span>{% endif %}</td>
+        <td>{% if r.source == 'snapshot' %}<span class="tag snap">快照基线</span>
+            {% else %}<span class="tag">PIO 重算</span>{% endif %}</td>
+        <td><a href="{{ url_for('main.terminal_detail', terminal_id=r.id) }}">查看规则链 →</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">尚未登记终端。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

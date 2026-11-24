@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h1>终端 {{ terminal.name }} 的依据链</h1>
+  <p>
+    快照时旧地址到期：<code>{{ terminal.snapshot_expiry | utc or '无旧地址' }}</code><br>
+    核查时刻：<code>{{ round.check_at | utc }}</code>
+  </p>
+  <h2>结论</h2>
+  <p>
+    重算后到期：<code>{{ conclusion.expiry_at | utc or '无地址' }}</code>
+    {% if conclusion.alive_at_check %}<span class="tag alive">核查时仍持有旧地址</span>
+    {% else %}<span class="tag gone">核查时已到期/无地址</span>{% endif %}
+    来源：
+    {% if conclusion.source == 'snapshot' %}<span class="tag snap">快照基线（无通告改变它）</span>
+    {% else %}<span class="tag snap">PIO 通告重算</span>{% endif %}
+  </p>
+</div>
+
+<div class="card">
+  <h2>通告逐条应用记录（按接收时刻、序号排序后重放）</h2>
+  <table>
+    <thead><tr><th>序号</th><th>路由器</th><th>接收时刻 (UTC)</th><th>有效寿命(s)</th>
+      <th>应用规则</th><th>应用前到期</th><th>应用后到期</th><th>说明</th></tr></thead>
+    <tbody>
+    {% for r in records %}
+      <tr>
+        <td>{{ r.seq }}</td>
+        <td>{{ r.router }}</td>
+        <td><code>{{ r.received_at | utc }}</code></td>
+        <td>{{ r.valid_lifetime }}</td>
+        <td><span class="rule {% if not r.changed %}nochange{% endif %}">§5.5.3({{ r.rule }})
+          {% if r.changed %}· 改变{% else %}· 未改变{% endif %}</span></td>
+        <td>{{ r.expiry_before | utc or '—' }}</td>
+        <td>{{ r.expiry_after | utc or '—' }}</td>
+        <td class="muted">{{ r.detail }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="muted">该终端尚无补报通告，结论保持快照基线。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">
+    规则：(d) 无地址时按非 0 寿命形成；(e).1 寿命&gt;7200s 或 &gt;剩余寿命则重设；
+    (e).2 剩余≤7200s 时未认证通告被忽略；(e).3 其余短寿命通告将到期截断为接收时刻+7200s。
+  </p>
+  <p><a href="{{ url_for('main.index') }}">← 返回核查结论</a></p>
+</div>
+{% endblock %}

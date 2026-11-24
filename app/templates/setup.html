@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card">
+  <h1>本轮核查时刻（UTC）</h1>
+  {% if rnd %}
+    <p>本轮已建立，时刻不可修改：</p>
+    <table>
+      <tr><th>快照 UTC 时刻</th><td><code>{{ rnd.snapshot_at | utc }}</code></td></tr>
+      <tr><th>核查 UTC 时刻</th><td><code>{{ rnd.check_at | utc }}</code></td></tr>
+    </table>
+    <p class="muted">如需重填，请回到结论页清空本轮数据。</p>
+  {% else %}
+  <form method="post">
+    <div class="grid">
+      <div>
+        <label>快照 UTC 时刻（Z 或 +00:00）</label>
+        <input name="snapshot_at" required placeholder="2026-11-20T00:00:00Z">
+      </div>
+      <div>
+        <label>核查 UTC 时刻（必须晚于快照）</label>
+        <input name="check_at" required placeholder="2026-11-20T06:00:00Z">
+      </div>
+    </div>
+    <p class="muted">必须显式标注时区；无时区后缀的时间会被拒绝。精度到秒。</p>
+    <p><button type="submit">建立本轮核查</button></p>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
